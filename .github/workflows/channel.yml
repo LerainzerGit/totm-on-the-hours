@@ -1,0 +1,130 @@
+name: TOTM Channel Automation
+
+# ---------------------------------------------------------------------------
+# Runs on every push, and on a 6-hour schedule to keep the episode library
+# and playlist fresh. Fetching/building runs on GitHub-hosted runners;
+# the actual 24/7 streaming process runs separately on a self-hosted
+# runner (see the `stream` job and README.md for setup).
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "totm-channel"
+  cancel-in-progress: false
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1) Fetch new episodes, rebuild the playlist, commit the results.
+  # -------------------------------------------------------------------------
+  update-channel:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python (for yt-dlp)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install yt-dlp and ffmpeg
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U yt-dlp
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Fetch episodes (yt-dlp)
+        run: ./scripts/fetch_episodes.sh
+
+      - name: Build playlist.m3u
+        run: ./scripts/build_playlist.sh
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git add -A playlist
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit updated playlist
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "totm-channel-bot"
+          git config user.email "totm-channel-bot@users.noreply.github.com"
+          git commit -m "chore: update episodes & playlist [automated]"
+          git push
+
+  # -------------------------------------------------------------------------
+  # 2) Deploy the docs/ viewer page to GitHub Pages.
+  # -------------------------------------------------------------------------
+  deploy-viewer:
+    needs: update-channel
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload viewer artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # -------------------------------------------------------------------------
+  # 3) Optional: (re)start the 24/7 stream on a self-hosted runner.
+  #
+  # This job only runs if you've registered a self-hosted runner (with the
+  # label "totm-streamer") against this repository — see README.md. It is
+  # skipped entirely on GitHub-hosted infrastructure, since GitHub Actions
+  # jobs are not suited to indefinitely-running processes.
+  # -------------------------------------------------------------------------
+  stream:
+    needs: update-channel
+    if: needs.update-channel.outputs.changed == 'true'
+    runs-on: [self-hosted, totm-streamer]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Ensure yt-dlp and ffmpeg are available
+        run: |
+          pip install -U yt-dlp --break-system-packages || pip install -U yt-dlp
+          command -v ffmpeg >/dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Restart totm-stream service
+        run: |
+          sudo systemctl restart totm-stream.service
+          sudo systemctl status totm-stream.service --no-pager
