@@ -1,0 +1,34 @@
+[Unit]
+Description=TOTM: On the Hours — 24/7 FFmpeg channel streamer
+Documentation=https://github.com/LerainzerGit/totm-on-the-hours
+# Start after MediaMTX so there's something for FFmpeg to publish into.
+After=network-online.target mediamtx.service
+Wants=network-online.target
+Requires=mediamtx.service
+
+[Service]
+Type=simple
+
+# --- EDIT THESE FOR YOUR ENVIRONMENT -------------------------------------
+User=totm
+Group=totm
+WorkingDirectory=/opt/totm-on-the-hours
+ExecStart=/opt/totm-on-the-hours/scripts/start_stream.sh
+# ---------------------------------------------------------------------------
+
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+
+# Keep logs in the journal for `journalctl -u totm-stream -f`
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=totm-stream
+
+# Modest hardening — relax if your environment needs broader access.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
