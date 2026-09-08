@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TOTM: On the Hours — 24/7 Talk of the Mock</title>
+<meta name="description" content="TOTM: On the Hours — a 24/7 FAST channel for Talk of the Mock." />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.15/hls.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0c10;
+    --panel: #14161c;
+    --accent: #ffb020;
+    --accent-dim: #7a5714;
+    --text: #f2f2f2;
+    --text-dim: #9a9ea8;
+    --live-red: #ff3b3b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid #22242c;
+    background: linear-gradient(180deg, var(--panel), var(--bg));
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand h1 {
+    font-size: 1.15rem;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+
+  .brand h1 span.accent {
+    color: var(--accent);
+  }
+
+  .fast-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--live-red);
+    box-shadow: 0 0 0 0 rgba(255,59,59,0.6);
+    animation: pulse 1.6s infinite;
+  }
+
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,59,59,0.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(255,59,59,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,59,59,0); }
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .player-wrap {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #22242c, 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+  }
+
+  .now-playing {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 16px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.85), rgba(0,0,0,0));
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .now-playing .badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .now-playing .ticker-track {
+    overflow: hidden;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  .now-playing .ticker-track span {
+    display: inline-block;
+    padding-left: 100%;
+    animation: ticker 14s linear infinite;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  @keyframes ticker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .panel {
+    margin-top: 20px;
+    background: var(--panel);
+    border: 1px solid #22242c;
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    justify-content: space-between;
+  }
+
+  .panel code {
+    color: var(--accent);
+    background: #1c1e26;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .reconnect-msg {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #241512;
+    border: 1px solid #4a2318;
+    color: #ffb3a1;
+    border-radius: 8px;
+    font-size: 0.85rem;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    padding: 32px 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>TOTM: <span class="accent">On the Hours</span></h1>
+    <span class="fast-label">FAST Channel</span>
+  </div>
+  <div class="status">
+    <span class="live-dot" id="liveDot"></span>
+    <span id="statusText">Connecting…</span>
+  </div>
+</header>
+
+<main>
+  <div class="player-wrap">
+    <video id="video" controls autoplay muted playsinline></video>
+    <div class="now-playing">
+      <span class="badge">Now Playing</span>
+      <div class="ticker-track">
+        <span>Talk of the Mock — TOTM: On the Hours is a 24/7 FAST channel streaming Talk of the Mock, non-stop.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="reconnect-msg" id="reconnectMsg">
+    Stream interrupted — attempting to reconnect automatically…
+  </div>
+
+  <div class="panel">
+    <span>Stream source: <code>http://localhost:8888/live/totm/index.m3u8</code></span>
+    <span>Powered by MediaMTX + FFmpeg + hls.js</span>
+  </div>
+</main>
+
+<footer>
+  TOTM: On the Hours — an unofficial 24/7 FAST channel for Talk of the Mock. Runs locally via MediaMTX.
+</footer>
+
+<script>
+  const STREAM_URL = "http://localhost:8888/live/totm/index.m3u8";
+  const video = document.getElementById("video");
+  const statusText = document.getElementById("statusText");
+  const liveDot = document.getElementById("liveDot");
+  const reconnectMsg = document.getElementById("reconnectMsg");
+
+  let hls = null;
+  let reconnectTimer = null;
+  const RECONNECT_DELAY_MS = 4000;
+
+  function setStatus(text, isLive) {
+    statusText.textContent = text;
+    liveDot.style.background = isLive ? "var(--live-red)" : "#555";
+    liveDot.style.animationPlayState = isLive ? "running" : "paused";
+  }
+
+  function scheduleReconnect() {
+    reconnectMsg.style.display = "block";
+    setStatus("Reconnecting…", false);
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(startPlayback, RECONNECT_DELAY_MS);
+  }
+
+  function startPlayback() {
+    reconnectMsg.style.display = "none";
+
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+
+    if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({
+        lowLatencyMode: true,
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 6,
+        enableWorker: true,
+      });
+
+      hls.loadSource(STREAM_URL);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        setStatus("Live", true);
+        video.play().catch(() => {
+          // Autoplay with sound may be blocked; video stays muted by default.
+        });
+      });
+
+      hls.on(Hls.Events.ERROR, function (event, data) {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              scheduleReconnect();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              scheduleReconnect();
+              break;
+          }
+        }
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS support (Safari)
+      video.src = STREAM_URL;
+      video.addEventListener("loadedmetadata", () => {
+        setStatus("Live", true);
+        video.play().catch(() => {});
+      });
+      video.addEventListener("error", scheduleReconnect);
+    } else {
+      setStatus("HLS not supported in this browser", false);
+    }
+  }
+
+  video.addEventListener("stalled", scheduleReconnect);
+  video.addEventListener("error", scheduleReconnect);
+
+  startPlayback();
+</script>
+
+</body>
+</html>
