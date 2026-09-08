@@ -1,0 +1,80 @@
+###############################################################################
+# TOTM: On the Hours — MediaMTX configuration
+#
+# RTMP ingest : rtmp://localhost:1935/live/totm
+# HLS output  : http://localhost:8888/live/totm/index.m3u8
+#
+# Localhost-only by default. Low-latency HLS enabled.
+###############################################################################
+
+logLevel: info
+logDestinations: [stdout]
+
+# ---------------------------------------------------------------------------
+# Global / API
+# ---------------------------------------------------------------------------
+api: yes
+apiAddress: 127.0.0.1:9997
+
+metrics: no
+pprof: no
+
+# ---------------------------------------------------------------------------
+# RTMP (ingest)
+# ---------------------------------------------------------------------------
+rtmp: yes
+rtmpAddress: 127.0.0.1:1935
+rtmpEncryption: "no"
+rtmpAllowOrigin: ""
+
+# ---------------------------------------------------------------------------
+# HLS (output)
+# ---------------------------------------------------------------------------
+hls: yes
+hlsAddress: 127.0.0.1:8888
+
+# Low-latency HLS
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+
+# Only localhost may pull HLS by default. Widen this (e.g. to your LAN CIDR
+# or "*") only if you understand the exposure of doing so.
+hlsAllowOrigin: "http://localhost:8080"
+hlsTrustedProxies: []
+
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsDirectory: ""
+
+# ---------------------------------------------------------------------------
+# Disable protocols we don't need for this project
+# ---------------------------------------------------------------------------
+rtsp: no
+rtsps: no
+webrtc: no
+srt: no
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  live/totm:
+    # Anyone publishing must hit rtmp://localhost:1935/live/totm
+    source: publisher
+
+    # Localhost-only publish/read restriction. Loosen only if you know what
+    # you're exposing to your network.
+    publishUser:
+    publishPass:
+    publishIPs: ["127.0.0.1/32", "::1/128"]
+
+    readUser:
+    readPass:
+    readIPs: []
+
+    # Keep the stream "hot" even with zero readers, since FFmpeg is looping
+    # a 24/7 playlist into this path.
+    sourceOnDemand: no
