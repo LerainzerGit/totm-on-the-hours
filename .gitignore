@@ -1,0 +1,16 @@
+# Downloaded episode media (large binaries — fetched by CI/self-hosted runner,
+# not meant to live in git history). Comment this out if you'd rather commit
+# episodes directly to the repo.
+playlist/episodes/*
+!playlist/episodes/.gitkeep
+
+# yt-dlp bookkeeping
+playlist/episodes/.download-archive.txt
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# Logs
+*.log
